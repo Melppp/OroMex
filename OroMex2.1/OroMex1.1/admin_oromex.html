@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin OroMex: Billetes y Monedas</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary-gold: #FFD700;
+      --primary-brown: #8B4513;
+      --accent-yellow: #FFA500;
+      --nav-item: #F3C742;
+      --primary-dark: #B8860B;
+      --white: #FFFFFF;
+      --black: #000000;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--accent-yellow) 50%, var(--primary-dark) 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: rgba(255, 255, 255, 0.97);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    .header {
+      text-align: center;
+      padding: 40px 20px;
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-dark) 100%);
+      color: var(--white);
+      position: relative;
+    }
+
+    /* Eliminar .logo-oromex y .logo-text */
+    .header h1 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 2.5em;
+      color: var(--white);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    .header p {
+      color: var(--primary-gold);
+      font-size: 1.1em;
+      font-weight: 300;
+      margin-bottom: 0;
+    }
+    @media (max-width: 600px) {
+      .header h1 { font-size: 1.3em; }
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--primary-brown);
+      overflow: hidden;
+      border-bottom: 3px solid var(--primary-gold);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 20px 15px;
+      background: var(--primary-brown);
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      color: var(--nav-item);
+      font-weight: bold;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tab::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .tab:hover::before {
+      left: 100%;
+    }
+
+    .tab:hover {
+      background: var(--primary-dark);
+      color: var(--white);
+      transform: translateY(-2px);
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--primary-dark) 100%);
+      color: var(--white);
+      box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .tab-content {
+      display: none;
+      background: var(--white);
+      padding: 40px;
+      min-height: 600px;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--primary-brown);
+      font-size: 2em;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .tab-content > p {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+      font-style: italic;
+    }
+
+    label {
+      display: block;
+      margin-top: 20px;
+      font-weight: bold;
+      color: var(--primary-brown);
+      font-size: 1.1em;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 15px;
+      margin-top: 8px;
+      border-radius: 10px;
+      border: 2px solid var(--primary-gold);
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: #FFFEF7;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-dark);
+      box-shadow: 0 0 15px rgba(218, 165, 32, 0.3);
+      background: var(--white);
+      transform: translateY(-2px);
+    }
+
+    button {
+      margin-top: 25px;
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--accent-yellow) 100%);
+      color: var(--primary-brown);
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, var(--accent-yellow) 0%, var(--primary-dark) 100%);
+      color: var(--white);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    button:active {
+      transform: translateY(-1px);
+    }
+
+    .msg {
+      margin-top: 20px;
+      text-align: center;
+      padding: 15px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .msg.success {
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--nav-item) 100%);
+      color: var(--primary-brown);
+      border: 2px solid var(--primary-gold);
+      box-shadow: 0 3px 10px rgba(218, 165, 32, 0.2);
+    }
+
+    .msg.error {
+      background: linear-gradient(135deg, #FFF3CD 0%, #FFD700 100%);
+      color: var(--primary-brown);
+      border: 2px solid var(--primary-gold);
+      box-shadow: 0 3px 10px rgba(218, 165, 32, 0.15);
+    }
+
+    .list {
+      margin-top: 40px;
+    }
+
+    .item {
+      background: linear-gradient(135deg, #FFFEF7 0%, #FFF9E3 100%);
+      margin-bottom: 20px;
+      padding: 25px;
+      border-radius: 15px;
+      border-left: 5px solid var(--primary-gold);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .item span {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .item span b {
+      color: var(--primary-brown);
+      font-weight: bold;
+    }
+
+    .item-actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .item-actions button {
+      width: auto;
+      margin: 0;
+      font-size: 14px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    .editando {
+      background: linear-gradient(135deg, #FFFACD 0%, #F0E68C 100%);
+      border-left-color: var(--primary-gold);
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+    }
+
+    .delete-btn {
+      background: linear-gradient(135deg, #DC143C 0%, #B22222 100%);
+      color: var(--white);
+    }
+
+    .delete-btn:hover {
+      background: linear-gradient(135deg, #B22222 0%, #8B0000 100%);
+    }
+
+    .status-pending {
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--accent-yellow) 100%);
+      color: var(--primary-brown);
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .status-confirmed {
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--nav-item) 100%);
+      color: var(--primary-brown);
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .status-cancelled {
+      background: linear-gradient(135deg, #F5DEB3 0%, #FFD700 100%);
+      color: var(--primary-brown);
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .sala-badge {
+      display: inline-block;
+      padding: 6px 15px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: 15px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .sala-moneda, .sala-billete {
+      background: linear-gradient(135deg, var(--primary-gold) 0%, var(--accent-yellow) 100%);
+      color: var(--primary-brown);
+    }
+
+    .section-title {
+      color: var(--primary-brown);
+      margin: 35px 0 20px 0;
+      padding-bottom: 15px;
+      border-bottom: 3px solid var(--primary-gold);
+      font-size: 1.8em;
+      font-weight: bold;
+      text-align: center;
+      position: relative;
+    }
+
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary-gold), var(--accent-yellow), var(--primary-dark));
+      border-radius: 2px;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .container {
+        margin: 10px;
+        border-radius: 15px;
+      }
+
+      .header {
+        padding: 30px 15px;
+      }
+
+      .header h1 {
+        font-size: 2em;
+      }
+
+      .tabs {
+        flex-direction: column;
+      }
+
+      .tab {
+        padding: 15px;
+      }
+
+      .tab-content {
+        padding: 25px 20px;
+      }
+
+      .item-actions {
+        flex-direction: column;
+      }
+
+      .item-actions button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏛️ Panel de Administración OroMex</h1>
+      <p>Gestiona tu museo de billetes y monedas</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="mostrarTab('galeria')">🖼️ Galería</button>
+      <button class="tab" onclick="mostrarTab('videos')">🎥 Videos</button>
+      <button class="tab" onclick="mostrarTab('comentarios')">💬 Comentarios</button>
+      <button class="tab" onclick="mostrarTab('visitas')">📅 Visitas</button>
+    </div>
+
+    <!-- Tab Galería -->
+    <div id="galeria" class="tab-content active">
+      <h2>🖼️ Gestión de Galería</h2>
+      <p style="text-align: center; color: #666; margin-bottom: 25px;">Agrega y gestiona monedas y billetes en las diferentes salas del museo</p>
+      
+      <form id="formPieza">
+        <label for="salaPieza">Sala:</label>
+        <select id="salaPieza" required>
+          <option value="">Selecciona una sala</option>
+          <option value="monedas">Sala 1 - Monedas</option>
+          <option value="billetes">Sala 2 - Billetes</option>
+        </select>
+        <label for="tituloP">Título:</label>
+        <input type="text" id="tituloP" required placeholder="Ej: Moneda de 5 pesos de 1992">
+        <label for="descripcionP">Descripción:</label>
+        <textarea id="descripcionP" rows="3" required placeholder="Describe la pieza, su historia, características..."></textarea>
+        <label for="periodoP">Periodo:</label>
+        <input type="text" id="periodoP" required placeholder="Ej: 1992-1994">
+        <label for="imagenP">Nombre de imagen local:</label>
+        <input type="text" id="imagenP" required placeholder="Ej: img4, moneda5pesos">
+        <button type="submit" id="btnPieza">Agregar Pieza</button>
+        <div class="msg" id="msgP"></div>
+      </form>
+      <div class="list" id="listaPiezas"></div>
+    </div>
+
+    <!-- Tab Videos -->
+    <div id="videos" class="tab-content">
+      <h2>🎥 Gestión de Videos</h2>
+      <p style="text-align: center; color: #666; margin-bottom: 25px;">Agrega videos educativos sobre numismática</p>
+      
+      <form id="formVideo">
+        <label for="tituloV">Título del Video:</label>
+        <input type="text" id="tituloV" required placeholder="Ej: Historia del Peso Mexicano">
+        <label for="descripcionV">Descripción:</label>
+        <textarea id="descripcionV" rows="3" required placeholder="Describe el contenido del video..."></textarea>
+        <label for="urlVideo">URL del Video:</label>
+        <input type="url" id="urlVideo" required placeholder="https://www.youtube.com/watch?v=...">
+        <label for="duracionV">Duración:</label>
+        <input type="text" id="duracionV" required placeholder="Ej: 5:30">
+        <button type="submit" id="btnVideo">Agregar Video</button>
+        <div class="msg" id="msgV"></div>
+      </form>
+      <div class="list" id="listaVideos"></div>
+    </div>
+
+    <!-- Tab Comentarios -->
+    <div id="comentarios" class="tab-content">
+      <h2>💬 Gestión de Comentarios</h2>
+      <p style="text-align: center; color: #666; margin-bottom: 25px;">Revisa y gestiona los comentarios y reseñas de los visitantes</p>
+      
+      <div class="list" id="listaComentarios"></div>
+    </div>
+
+    <!-- Tab Visitas -->
+    <div id="visitas" class="tab-content">
+      <h2>📅 Gestión de Visitas</h2>
+      <p style="text-align: center; color: #666; margin-bottom: 25px;">Administra las visitas agendadas al museo</p>
+      
+      <div class="list" id="listaVisitas"></div>
+    </div>
+  </div>
+
+  <script>
+    // Configuración de Firebase (ya conectada a tu proyecto)
+    var firebaseConfig = {
+      apiKey: "AIzaSyDq_uYABNbcR6od6d9p0Www2HKBXlAaaoA",
+      authDomain: "oromex-5faf3.firebaseapp.com",
+      databaseURL: "https://oromex-5faf3-default-rtdb.firebaseio.com",
+      projectId: "oromex-5faf3",
+      storageBucket: "oromex-5faf3.appspot.com",
+      messagingSenderId: "63756141077",
+      appId: "1:63756141077:web:5ab04785daa10ee76bc41c",
+      measurementId: "G-TW1V90S73Q"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
+
+    // --- Sistema de Pestañas ---
+    function mostrarTab(tabName) {
+      // Ocultar todas las pestañas
+      const tabs = document.querySelectorAll('.tab-content');
+      tabs.forEach(tab => tab.classList.remove('active'));
+      
+      // Desactivar todos los botones
+      const buttons = document.querySelectorAll('.tab');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      
+      // Mostrar la pestaña seleccionada
+      document.getElementById(tabName).classList.add('active');
+      
+      // Activar el botón correspondiente
+      event.target.classList.add('active');
+    }
+
+    // --- Piezas Unificadas (Monedas y Billetes) ---
+    let editPiezaKey = null;
+    let editPiezaSala = null;
+
+    function renderPiezas() {
+      // Renderizar monedas
+      db.ref('monedas').on('value', function(snapshot) {
+        const lista = document.getElementById('listaPiezas');
+        let contenido = '<h3 class="section-title">Sala 1 - Monedas</h3>';
+        
+        if (!snapshot.exists()) {
+          contenido += '<p style="text-align: center; color: #666; padding: 20px;">No hay monedas registradas</p>';
+        } else {
+          snapshot.forEach(function(child) {
+            const data = child.val();
+            const key = child.key;
+            const div = document.createElement('div');
+            div.className = 'item' + (editPiezaKey === key ? ' editando' : '');
+            div.innerHTML = `
+              <span><b>Título:</b> ${data.titulo} <span class="sala-badge sala-moneda">Sala 1</span></span>
+              <span><b>Descripción:</b> ${data.descripcion}</span>
+              <span><b>Periodo:</b> ${data.periodo}</span>
+              <span><b>Imagen:</b> ${data.imagen}</span>
+              <div class="item-actions">
+                <button onclick="editarPieza('${key}', 'monedas')">✏️ Editar</button>
+                <button onclick="eliminarPieza('${key}', 'monedas')" class="delete-btn">🗑️ Eliminar</button>
+              </div>
+            `;
+            contenido += div.outerHTML;
+          });
+        }
+
+        // Renderizar billetes
+        db.ref('billetes').once('value').then(function(billetesSnapshot) {
+          contenido += '<h3 class="section-title">Sala 2 - Billetes</h3>';
+          
+          if (!billetesSnapshot.exists()) {
+            contenido += '<p style="text-align: center; color: #666; padding: 20px;">No hay billetes registrados</p>';
+          } else {
+            billetesSnapshot.forEach(function(child) {
+              const data = child.val();
+              const key = child.key;
+              const div = document.createElement('div');
+              div.className = 'item' + (editPiezaKey === key ? ' editando' : '');
+              div.innerHTML = `
+                <span><b>Título:</b> ${data.titulo} <span class="sala-badge sala-billete">Sala 2</span></span>
+                <span><b>Descripción:</b> ${data.descripcion}</span>
+                <span><b>Periodo:</b> ${data.periodo}</span>
+                <span><b>Imagen:</b> ${data.imagen}</span>
+                <div class="item-actions">
+                  <button onclick="editarPieza('${key}', 'billetes')">✏️ Editar</button>
+                  <button onclick="eliminarPieza('${key}', 'billetes')" class="delete-btn">🗑️ Eliminar</button>
+                </div>
+              `;
+              contenido += div.outerHTML;
+            });
+          }
+          
+          lista.innerHTML = contenido;
+        });
+      });
+    }
+    renderPiezas();
+
+    document.getElementById('formPieza').onsubmit = function(e) {
+      e.preventDefault();
+      const sala = salaPieza.value;
+      const data = {
+        titulo: tituloP.value.trim(),
+        descripcion: descripcionP.value.trim(),
+        periodo: periodoP.value.trim(),
+        imagen: imagenP.value.trim()
+      };
+      
+      if (!sala || !data.titulo || !data.descripcion || !data.periodo || !data.imagen) {
+        mostrarMensaje('msgP', 'Todos los campos son obligatorios.', 'error');
+        return;
+      }
+      
+      if (editPiezaKey) {
+        db.ref(sala + '/' + editPiezaKey).set(data, function(error) {
+          if (error) {
+            mostrarMensaje('msgP', '❌ Error al editar: ' + error, 'error');
+          } else {
+            mostrarMensaje('msgP', '✅ ¡Pieza editada correctamente!', 'success');
+            editPiezaKey = null;
+            editPiezaSala = null;
+            btnPieza.textContent = "Agregar Pieza";
+            formPieza.reset();
+          }
+        });
+      } else {
+        db.ref(sala).push(data, function(error) {
+          if (error) {
+            mostrarMensaje('msgP', '❌ Error al agregar: ' + error, 'error');
+          } else {
+            mostrarMensaje('msgP', '✅ ¡Pieza agregada correctamente!', 'success');
+            formPieza.reset();
+          }
+        });
+      }
+    };
+
+    window.editarPieza = function(key, sala) {
+      db.ref(sala + '/' + key).once('value').then(function(snapshot) {
+        const data = snapshot.val();
+        if (data) {
+          salaPieza.value = sala;
+          tituloP.value = data.titulo || '';
+          descripcionP.value = data.descripcion || '';
+          periodoP.value = data.periodo || '';
+          imagenP.value = data.imagen || '';
+          editPiezaKey = key;
+          editPiezaSala = sala;
+          btnPieza.textContent = "Guardar Cambios";
+          mostrarMensaje('msgP', `Editando ${sala === 'monedas' ? 'moneda' : 'billete'}...`, 'success');
+          renderPiezas();
+        } else {
+          mostrarMensaje('msgP', '❌ Error: No se encontró la pieza para editar', 'error');
+        }
+      }).catch(function(error) {
+        mostrarMensaje('msgP', '❌ Error al cargar la pieza: ' + error.message, 'error');
+      });
+    };
+
+    window.eliminarPieza = function(key, sala) {
+      const tipoPieza = sala === 'monedas' ? 'moneda' : 'billete';
+      if (confirm(`¿Seguro que quieres eliminar este ${tipoPieza}?`)) {
+        db.ref(sala + '/' + key).remove().then(function() {
+          mostrarMensaje('msgP', `✅ ${tipoPieza.charAt(0).toUpperCase() + tipoPieza.slice(1)} eliminado correctamente`, 'success');
+        }).catch(function(error) {
+          mostrarMensaje('msgP', '❌ Error al eliminar: ' + error.message, 'error');
+        });
+      }
+    };
+
+    // --- Videos ---
+    let editVideoKey = null;
+    function renderVideos() {
+      db.ref('videos').on('value', function(snapshot) {
+        const lista = document.getElementById('listaVideos');
+        lista.innerHTML = '';
+        if (!snapshot.exists()) {
+          lista.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No hay videos registrados</p>';
+          return;
+        }
+        snapshot.forEach(function(child) {
+          const data = child.val();
+          const key = child.key;
+          const div = document.createElement('div');
+          div.className = 'item' + (editVideoKey === key ? ' editando' : '');
+          div.innerHTML = `
+            <span><b>Título:</b> ${data.titulo}</span>
+            <span><b>Descripción:</b> ${data.descripcion}</span>
+            <span><b>URL:</b> <a href="${data.url}" target="_blank">${data.url}</a></span>
+            <span><b>Duración:</b> ${data.duracion}</span>
+            <div class="item-actions">
+              <button onclick="editarVideo('${key}')">✏️ Editar</button>
+              <button onclick="eliminarVideo('${key}')" class="delete-btn">🗑️ Eliminar</button>
+            </div>
+          `;
+          lista.appendChild(div);
+        });
+      });
+    }
+    renderVideos();
+
+    document.getElementById('formVideo').onsubmit = function(e) {
+      e.preventDefault();
+      const data = {
+        titulo: tituloV.value.trim(),
+        descripcion: descripcionV.value.trim(),
+        url: urlVideo.value.trim(),
+        duracion: duracionV.value.trim()
+      };
+      if (!data.titulo || !data.descripcion || !data.url || !data.duracion) {
+        mostrarMensaje('msgV', 'Todos los campos son obligatorios.', 'error');
+        return;
+      }
+      if (editVideoKey) {
+        db.ref('videos/' + editVideoKey).set(data, function(error) {
+          if (error) {
+            mostrarMensaje('msgV', '❌ Error al editar: ' + error, 'error');
+          } else {
+            mostrarMensaje('msgV', '✅ ¡Video editado correctamente!', 'success');
+            editVideoKey = null;
+            btnVideo.textContent = "Agregar Video";
+            formVideo.reset();
+          }
+        });
+      } else {
+        db.ref('videos').push(data, function(error) {
+          if (error) {
+            mostrarMensaje('msgV', '❌ Error al agregar: ' + error, 'error');
+          } else {
+            mostrarMensaje('msgV', '✅ ¡Video agregado correctamente!', 'success');
+            formVideo.reset();
+          }
+        });
+      }
+    };
+
+    window.editarVideo = function(key) {
+      db.ref('videos/' + key).once('value').then(function(snapshot) {
+        const data = snapshot.val();
+        tituloV.value = data.titulo;
+        descripcionV.value = data.descripcion;
+        urlVideo.value = data.url;
+        duracionV.value = data.duracion;
+        editVideoKey = key;
+        btnVideo.textContent = "Guardar Cambios";
+        mostrarMensaje('msgV', 'Editando video...', 'success');
+        renderVideos();
+      });
+    };
+
+    window.eliminarVideo = function(key) {
+      if (confirm("¿Seguro que quieres eliminar este video?")) {
+        db.ref('videos/' + key).remove().then(function() {
+          mostrarMensaje('msgV', '✅ Video eliminado correctamente', 'success');
+        }).catch(function(error) {
+          mostrarMensaje('msgV', '❌ Error al eliminar: ' + error.message, 'error');
+        });
+      }
+    };
+
+    // --- Comentarios/Reseñas ---
+    function renderComentarios() {
+      db.ref('comentarios').on('value', function(snapshot) {
+        const lista = document.getElementById('listaComentarios');
+        lista.innerHTML = '';
+        if (!snapshot.exists()) {
+          lista.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No hay comentarios aún</p>';
+          return;
+        }
+        snapshot.forEach(function(child) {
+          const data = child.val();
+          const key = child.key;
+          const fecha = new Date(data.fecha).toLocaleString('es-ES');
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.innerHTML = `
+            <span><b>Usuario:</b> ${data.usuario}</span>
+            <span><b>Comentario:</b> ${data.comentario}</span>
+            <span><b>Calificación:</b> ${'⭐'.repeat(data.calificacion)}</span>
+            <span><b>Fecha:</b> ${fecha}</span>
+            <div class="item-actions">
+              <button onclick="eliminarComentario('${key}')" class="delete-btn">🗑️ Eliminar Comentario</button>
+            </div>
+          `;
+          lista.appendChild(div);
+        });
+      });
+    }
+    renderComentarios();
+
+    window.eliminarComentario = function(key) {
+      if (confirm("¿Seguro que quieres eliminar este comentario?")) {
+        db.ref('comentarios/' + key).remove().then(function() {
+          mostrarMensaje('msgC', '✅ Comentario eliminado correctamente', 'success');
+        }).catch(function(error) {
+          mostrarMensaje('msgC', '❌ Error al eliminar: ' + error.message, 'error');
+        });
+      }
+    };
+
+    // --- Visitas Agendadas ---
+    function renderVisitas() {
+      db.ref('visitas').on('value', function(snapshot) {
+        const lista = document.getElementById('listaVisitas');
+        lista.innerHTML = '';
+        if (!snapshot.exists()) {
+          lista.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No hay visitas agendadas</p>';
+          return;
+        }
+        snapshot.forEach(function(child) {
+          const data = child.val();
+          const key = child.key;
+          const fecha = new Date(data.fecha).toLocaleString('es-ES');
+          const div = document.createElement('div');
+          div.className = 'item';
+          div.innerHTML = `
+            <span><b>Nombre:</b> ${data.nombre}</span>
+            <span><b>Email:</b> ${data.email}</span>
+            <span><b>Teléfono:</b> ${data.telefono}</span>
+            <span><b>Fecha y Hora:</b> ${fecha}</span>
+            <span><b>Mensaje:</b> ${data.mensaje}</span>
+            <span><b>Estado:</b> <span class="status-${data.estado || 'pending'}">${data.estado || 'Pendiente'}</span></span>
+            <div class="item-actions">
+              <button onclick="cambiarEstadoVisita('${key}', 'confirmed')" class="status-confirmed">✅ Confirmar</button>
+              <button onclick="cambiarEstadoVisita('${key}', 'cancelled')" class="status-cancelled">❌ Cancelar</button>
+              <button onclick="eliminarVisita('${key}')" class="delete-btn">🗑️ Eliminar</button>
+            </div>
+          `;
+          lista.appendChild(div);
+        });
+      });
+    }
+    renderVisitas();
+
+    window.cambiarEstadoVisita = function(key, estado) {
+      const estadoText = estado === 'confirmed' ? 'Confirmada' : 'Cancelada';
+      if (confirm(`¿Seguro que quieres marcar esta visita como ${estadoText}?`)) {
+        db.ref('visitas/' + key + '/estado').set(estado).then(function() {
+          mostrarMensaje('msgV', `✅ Visita marcada como ${estadoText}`, 'success');
+        }).catch(function(error) {
+          mostrarMensaje('msgV', '❌ Error al cambiar estado: ' + error.message, 'error');
+        });
+      }
+    };
+
+    window.eliminarVisita = function(key) {
+      if (confirm("¿Seguro que quieres eliminar esta visita?")) {
+        db.ref('visitas/' + key).remove().then(function() {
+          mostrarMensaje('msgV', '✅ Visita eliminada correctamente', 'success');
+        }).catch(function(error) {
+          mostrarMensaje('msgV', '❌ Error al eliminar: ' + error.message, 'error');
+        });
+      }
+    };
+
+    // --- Función para mostrar mensajes ---
+    function mostrarMensaje(elementId, mensaje, tipo) {
+      const elemento = document.getElementById(elementId);
+      elemento.textContent = mensaje;
+      elemento.className = 'msg ' + tipo;
+      setTimeout(() => {
+        elemento.textContent = '';
+        elemento.className = 'msg';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>
